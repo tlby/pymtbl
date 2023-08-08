@@ -295,6 +295,7 @@ cdef class reader(DictMixin):
     Keyword arguments:
     verify_checksums -- whether to verify data block checksums (default False)
     return_bytes -- whether to return data as bytes without attempting to convert it to str (default False)
+    fd -- if fname is the empty string, read from this file descriptor
     """
     cdef mtbl_reader *_instance
     cdef bool return_bytes
@@ -306,16 +307,20 @@ cdef class reader(DictMixin):
         with nogil:
             mtbl_reader_destroy(&self._instance)
 
-    def __init__(self, str fname, bool verify_checksums=False, bool return_bytes=False):
+    def __init__(self, str fname, bool verify_checksums=False, bool return_bytes=False, fd=-1):
         cdef mtbl_reader_options *opt
         cdef bytes tfn_bytes = fname.encode('utf-8')
         cdef char *tfn = tfn_bytes
+        cdef int tfd = fd
         self.return_bytes = return_bytes
 
         with nogil:
             opt = mtbl_reader_options_init()
             mtbl_reader_options_set_verify_checksums(opt, verify_checksums)
-            self._instance = mtbl_reader_init(tfn, opt)
+            if tfn[0] == 0:
+                self._instance = mtbl_reader_init(tfn, opt)
+            else:
+                self._instance = mtbl_reader_init_fd(tfd, opt)
             mtbl_reader_options_destroy(&opt)
 
         if (self._instance == NULL):
@@ -441,6 +446,7 @@ cdef class writer(object):
     compression -- compression type (default COMPRESSION_NONE)
     block_size -- maximum data block size in bytes (default 8192)
     block_restart_interval -- how frequently to restart key prefix compression (default 16)
+    fd -- if fname is the empty string, write to this file descriptor
     """
     cdef mtbl_writer *_instance
     cdef _lock
@@ -456,7 +462,8 @@ cdef class writer(object):
             str fname,
             mtbl_compression_type compression=COMPRESSION_NONE,
             size_t block_size=8192,
-            size_t block_restart_interval=16):
+            size_t block_restart_interval=16,
+            int fd=-1):
         if not (compression == COMPRESSION_NONE or
                 compression == COMPRESSION_SNAPPY or
                 compression == COMPRESSION_ZLIB or
@@ -470,13 +477,17 @@ cdef class writer(object):
         cdef bytes tfn_bytes = fname.encode('utf-8')
         cdef char *tfn = tfn_bytes
         cdef mtbl_writer_options *opt
+        cdef int tfd = fd
 
         with nogil:
             opt = mtbl_writer_options_init()
             mtbl_writer_options_set_compression(opt, compression)
             mtbl_writer_options_set_block_size(opt, block_size)
             mtbl_writer_options_set_block_restart_interval(opt, block_restart_interval)
-            self._instance = mtbl_writer_init(tfn, opt)
+            if tfn[0] == 0:
+                self._instance = mtbl_writer_init(tfn, opt)
+            else:
+                self._instance = mtbl_writer_init_fd(tfd, opt)
             mtbl_writer_options_destroy(&opt)
         if self._instance == NULL:
             raise IOError("unable to initialize file: '%s'" % fname)

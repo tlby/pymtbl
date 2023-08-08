@@ -68,6 +68,7 @@ cdef extern from "mtbl.h":
 
     # reader
     mtbl_reader *mtbl_reader_init(char *, mtbl_reader_options *) nogil
+    mtbl_reader *mtbl_reader_init_fd(int, mtbl_reader_options *) nogil
     void mtbl_reader_destroy(mtbl_reader **) nogil
     mtbl_source *mtbl_reader_source(mtbl_reader *) nogil
 
@@ -77,6 +78,7 @@ cdef extern from "mtbl.h":
 
     # writer
     mtbl_writer *mtbl_writer_init(char *, mtbl_writer_options *) nogil
+    mtbl_writer *mtbl_writer_init_fd(int, mtbl_writer_options *) nogil
     void mtbl_writer_destroy(mtbl_writer **) nogil
     mtbl_res mtbl_writer_add(mtbl_writer *, uint8_t *, size_t, uint8_t *, size_t) nogil
 
